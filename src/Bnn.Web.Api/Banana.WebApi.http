@@ -1,0 +1,14 @@
+@Banana.WebApi_HostAddress = http://localhost:5096
+
+GET {{Banana.WebApi_HostAddress}}/bananas/
+Accept: application/json
+
+###
+@id =1
+
+GET {{Banana.WebApi_HostAddress}}/bananas/{{id}}
+Accept: application/json
+
+###
+
+POST {{Banana.WebApi_HostAddress}}/bananas/
