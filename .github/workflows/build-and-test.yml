@@ -1,4 +1,4 @@
-name: Build and test
+name: Build and Test
 
 on:
   push:
@@ -14,19 +14,64 @@ on:
       - develop
 
 jobs:
-  build:
-
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
+    
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_NOLOGO: true
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetches all history for all branches and tags
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
+    
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+    
     - name: Restore dependencies
       run: dotnet restore ./Banana.sln
+    
     - name: Build
       run: dotnet build ./Banana.sln --configuration Release --no-restore
-    - name: Test
-      run: dotnet test ./Banana.sln --no-build --verbosity normal
+    
+    - name: Test with coverage
+      run: dotnet test ./Banana.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()  # Upload even if tests fail
+      with:
+        name: test-results
+        path: "**/TestResults/**/*"
+        retention-days: 7
+    
+    - name: Generate code coverage report
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.0
+      if: success()
+      with:
+        reports: '**/coverage.cobertura.xml'
+        targetdir: 'coveragereport'
+        reporttypes: 'HtmlInline_AzurePipelines;Cobertura;Badges'
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      if: success()
+      with:
+        name: coverage-report
+        path: coveragereport
+        retention-days: 7
