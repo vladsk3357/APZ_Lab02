@@ -57,7 +57,7 @@ jobs:
         mkdir -p ./.containers/db
         chmod -R 777 ./.containers
     
-    # Start PostgreSQL for migration validation using your existing docker-compose.ci.yml
+    # Start PostgreSQL for migration validation
     - name: Start PostgreSQL
       run: |
         docker compose -f docker-compose.ci.yml up -d db-postgres
@@ -68,13 +68,8 @@ jobs:
     - name: Install FluentMigrator CLI
       run: dotnet tool install --global FluentMigrator.DotNet.Cli
     
-    # List available migrations
-    - name: List migrations
-      run: |
-        dotnet fm list -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
-    
-    # Validate migrations can run successfully
-    - name: Validate migrations
+    # Apply migrations
+    - name: Apply migrations
       run: |
         dotnet fm migrate -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
     
