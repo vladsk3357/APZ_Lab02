@@ -52,7 +52,7 @@ jobs:
     
     - name: Start PostgreSQL
       run: |
-        docker-compose up -d db-postgres
+        docker compose up -d db-postgres
         # Wait for PostgreSQL to be ready
         sleep 10
     
@@ -65,8 +65,8 @@ jobs:
         dotnet fm migrate -p postgres -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./path/to/your/migrations/assembly.dll
         
     - name: Build and start Docker services
-      run: docker-compose up -d --build
+      run: docker compose up -d --build
     
     - name: Stop Docker services
-      run: docker-compose down
+      run: docker compose down
       if: always()  # Always run this step, even if previous steps fail
