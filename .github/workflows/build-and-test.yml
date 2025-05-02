@@ -68,20 +68,15 @@ jobs:
     - name: Install FluentMigrator CLI
       run: dotnet tool install --global FluentMigrator.DotNet.Cli
     
+    # List available migrations
+    - name: List migrations
+      run: |
+        dotnet fm list -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
+    
     # Validate migrations can run successfully
     - name: Validate migrations
       run: |
         dotnet fm migrate -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
-    
-    # Generate migration scripts for reference (but don't upload as artifacts)
-    - name: Generate migration scripts
-      run: |
-        mkdir -p ./migrations
-        dotnet fm script -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll -o ./migrations
-        
-        # List generated scripts for reference in logs
-        echo "Generated migration scripts:"
-        ls -la ./migrations/
     
     # Stop PostgreSQL
     - name: Stop PostgreSQL
