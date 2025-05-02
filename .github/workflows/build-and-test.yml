@@ -51,9 +51,18 @@ jobs:
     - name: Test
       run: dotnet test ./Banana.sln --configuration Release --no-build --verbosity normal
     
-    # Start PostgreSQL for migration validation
+    # Create directory for PostgreSQL data if needed
+    - name: Prepare PostgreSQL directory
+      run: |
+        mkdir -p ./.containers/db
+        chmod -R 777 ./.containers
+    
+    # Start PostgreSQL for migration validation using your existing docker-compose.ci.yml
     - name: Start PostgreSQL
-      run: docker compose -f docker-compose.ci.yml up -d db-postgres
+      run: |
+        docker compose -f docker-compose.ci.yml up -d db-postgres
+        # Wait for PostgreSQL to be ready
+        sleep 10
     
     # Install FluentMigrator CLI
     - name: Install FluentMigrator CLI
@@ -64,18 +73,15 @@ jobs:
       run: |
         dotnet fm migrate -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
     
-    # Generate migration scripts for reference
+    # Generate migration scripts for reference (but don't upload as artifacts)
     - name: Generate migration scripts
       run: |
         mkdir -p ./migrations
         dotnet fm script -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll -o ./migrations
-    
-    # Upload migration scripts as artifacts for reference
-    - name: Upload migration scripts
-      uses: actions/upload-artifact@v2
-      with:
-        name: migration-scripts
-        path: ./migrations/*.sql
+        
+        # List generated scripts for reference in logs
+        echo "Generated migration scripts:"
+        ls -la ./migrations/
     
     # Stop PostgreSQL
     - name: Stop PostgreSQL
