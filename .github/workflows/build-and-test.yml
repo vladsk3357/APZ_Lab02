@@ -62,7 +62,7 @@ jobs:
         dotnet tool install --global FluentMigrator.DotNet.Cli
         
         # Run migrations
-        dotnet fm migrate -p postgres -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
+        dotnet fm migrate -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
         
     - name: Build and start Docker services
       run: docker compose up -d --build
