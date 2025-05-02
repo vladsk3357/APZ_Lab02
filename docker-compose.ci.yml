@@ -1,0 +1,11 @@
+services:
+  db-postgres:
+    image: postgres:17
+    container_name: db-postgres
+    environment:
+      - POSTGRES_DB=banana
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    # No volume mounts for CI
