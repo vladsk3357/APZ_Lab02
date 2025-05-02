@@ -1,4 +1,4 @@
-name: Build and test
+name: Build, Test, and Deploy
 
 on:
   push:
@@ -22,9 +22,11 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       DOTNET_NOLOGO: true
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      DOCKER_REGISTRY: ""
       
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -47,3 +49,24 @@ jobs:
     
     - name: Test
       run: dotnet test ./Banana.sln --configuration Release --no-build --verbosity normal
+    
+    - name: Start PostgreSQL
+      run: |
+        docker-compose up -d db-postgres
+        # Wait for PostgreSQL to be ready
+        sleep 10
+    
+    - name: Run Database Migrations
+      run: |
+        # Install FluentMigrator.Console tool if not already in your project
+        dotnet tool install --global FluentMigrator.DotNet.Cli
+        
+        # Run migrations
+        dotnet fm migrate -p postgres -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./path/to/your/migrations/assembly.dll
+        
+    - name: Build and start Docker services
+      run: docker-compose up -d --build
+    
+    - name: Stop Docker services
+      run: docker-compose down
+      if: always()  # Always run this step, even if previous steps fail
