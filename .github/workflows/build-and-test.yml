@@ -1,4 +1,4 @@
-name: Build, Test, and Deploy
+name: Build and Test
 
 on:
   push:
@@ -14,7 +14,8 @@ on:
       - develop
 
 jobs:
-  build:
+  build-and-test:
+    name: Build, Test, and Validate
     runs-on: ubuntu-latest
     
     env:
@@ -22,7 +23,7 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       DOTNET_NOLOGO: true
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
-      DOCKER_REGISTRY: ""
+      APPDATA: "/tmp"  # Set APPDATA to prevent warnings
       
     steps:
     - name: Checkout code
@@ -50,23 +51,33 @@ jobs:
     - name: Test
       run: dotnet test ./Banana.sln --configuration Release --no-build --verbosity normal
     
+    # Start PostgreSQL for migration validation
     - name: Start PostgreSQL
-      run: |
-        docker compose up -d db-postgres
-        # Wait for PostgreSQL to be ready
-        sleep 10
+      run: docker compose -f docker-compose.ci.yml up -d db-postgres
     
-    - name: Run Database Migrations
+    # Install FluentMigrator CLI
+    - name: Install FluentMigrator CLI
+      run: dotnet tool install --global FluentMigrator.DotNet.Cli
+    
+    # Validate migrations can run successfully
+    - name: Validate migrations
       run: |
-        # Install FluentMigrator.Console tool if not already in your project
-        dotnet tool install --global FluentMigrator.DotNet.Cli
-        
-        # Run migrations
         dotnet fm migrate -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll
-        
-    - name: Build and start Docker services
-      run: docker compose up -d --build
     
-    - name: Stop Docker services
-      run: docker compose down
+    # Generate migration scripts for reference
+    - name: Generate migration scripts
+      run: |
+        mkdir -p ./migrations
+        dotnet fm script -p PostgreSQL -c "Host=localhost;Database=banana;Username=postgres;Password=postgres" -a ./src/Bnn.Data/bin/Release/net9.0/Bnn.Data.dll -o ./migrations
+    
+    # Upload migration scripts as artifacts for reference
+    - name: Upload migration scripts
+      uses: actions/upload-artifact@v2
+      with:
+        name: migration-scripts
+        path: ./migrations/*.sql
+    
+    # Stop PostgreSQL
+    - name: Stop PostgreSQL
       if: always()  # Always run this step, even if previous steps fail
+      run: docker compose -f docker-compose.ci.yml down
